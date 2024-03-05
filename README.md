@@ -1,4 +1,4 @@
-Audio File Randomizer
+# Audio File Randomizer
 
 Randomizes audio files in a given directory.
 
