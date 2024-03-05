@@ -25,7 +25,7 @@ defeat your randomization efforts. By default, new files will have a random
 amount of silence between 5-10 seconds added to the beginning.
 
 To alter this behavior, pass a second argument to the script in this format:
-`<min seconds of silence> <max seconds of silence>`.
+`<min seconds of silence> <max seconds of silence>`. Make sure to quote this.
 
 For example, to randomly add between 30 and 60 seconds of silence:
 
