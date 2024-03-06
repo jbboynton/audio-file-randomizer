@@ -35,7 +35,7 @@ class AudioFileRandomizer
     @time_added_disable = validate_time_added[:disable]
     @file_prefix = validate_file_prefix
 
-    @randomized_directory = "#{root_directory}/randomized"
+    @randomized_directory = "#{root_directory}/Randomized"
     @output_directory =
       "#{randomized_directory}/#{Time.now.strftime("%Y%m%d_%H%M%S")}"
 
@@ -112,6 +112,7 @@ class AudioFileRandomizer
         channels: find_channels(result),
         format: find_format(result),
         sample_rate: find_sample_rate(result),
+        encoder: find_encoder(result),
       }
     end
 
@@ -126,11 +127,11 @@ class AudioFileRandomizer
     text.match(%r(Hz, ((\d+) channels|mono|stereo)))
 
     if $1 == "mono"
-      channels = 1
+      channels = "mono"
     elsif $1 == "stereo"
-      channels = 2
-    elsif $1.split(" ").last.numeric?
-      channels = $1.split(" ").last
+      channels = "stereo"
+    elsif $2.split(" ").last.to_i != 0
+      channels = "stereo"
     end
 
     channels
@@ -144,6 +145,12 @@ class AudioFileRandomizer
 
   def find_sample_rate(text)
     text.match(%r((\d+) Hz))
+
+    $1
+  end
+
+  def find_encoder(text)
+    text.match(%r(Stream #0:0: Audio: (\w+).*,))
 
     $1
   end
@@ -170,6 +177,7 @@ class AudioFileRandomizer
     channels = args[:channels]
     format = args[:format]
     sample_rate = args[:sample_rate]
+    encoder = args[:encoder]
 
     input_file = args[:input_file]
     output_file = "#{output_directory}/#{file_prefix}_#{idx + 1}.#{format}"
@@ -183,6 +191,7 @@ class AudioFileRandomizer
         channels,
         format,
         sample_rate,
+        encoder,
       )
     end
 
@@ -198,14 +207,23 @@ class AudioFileRandomizer
         output_file,
         channels,
         format,
-        sample_rate
+        sample_rate,
+        encoder
       )
 
+    tmp_silence_file = "#{output_directory}/silence_tmp.#{format}"
     silence_file = "#{output_directory}/silence.#{format}"
     silence_time = rand(time_added_min..time_added_max).round(2)
 
     filter = "anullsrc=channel_layout=#{channels}:sample_rate=#{sample_rate}"
-    cmd = %(ffmpeg -f lavfi -i #{filter} -t #{silence_time} '#{silence_file}')
+    cmd =
+      %(ffmpeg -f lavfi -i #{filter} -t #{silence_time} '#{tmp_silence_file}')
+
+    Open3.capture2e(cmd)
+
+    # Re-encode with the correct encoder/sample format (i.e. bit depth)
+    cmd =
+      %(ffmpeg -y -i '#{tmp_silence_file}' -acodec #{encoder} '#{silence_file}')
 
     Open3.capture2e(cmd)
 
@@ -213,7 +231,7 @@ class AudioFileRandomizer
 
     concat(output_file)
 
-    clean_up(silence_file)
+    clean_up(tmp_silence_file, silence_file)
   end
 
   def write_to_concat(silence_file, input_file)
@@ -229,7 +247,8 @@ class AudioFileRandomizer
     Open3.capture2e(cmd)
   end
 
-  def clean_up(silence_file)
+  def clean_up(tmp_silence_file, silence_file)
+    File.delete(tmp_silence_file)
     File.delete(silence_file)
     File.delete(concat_file)
   end
