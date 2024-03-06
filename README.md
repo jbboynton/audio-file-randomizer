@@ -38,3 +38,17 @@ To disable this behavior entirely, pass a second argument of `0`. For example:
 ```
 $ ./randomize.rb "$HOME/Desktop/audio_files" "0"
 ```
+
+### Customize output file name
+
+By default, output files will be named `file_1.wav`, `file_2.wav`, etc. To
+change the prefix, pass a third argument with your custom prefix string, such
+as:
+
+```
+$ ./randomize.rb "$HOME/Desktop/audio_files" "5 10" "master"
+```
+
+The result will be files named `master_1.wav`, `master_2.wav`, and so on. Note
+that this requires a second argument to be provided. To use the default behavior,
+pass the string "5 10".
